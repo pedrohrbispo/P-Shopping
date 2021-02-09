@@ -1,20 +1,32 @@
 let totalPrice = 0; // Variável que armazaena o preço total
-const roundToTwoDecimals = (num) => {
-  num = parseFloat(num);
-  Math.round((num * 100) + Number.EPSILON) / 100;
-  return num;
+const round = (num) => {
+	if (!("" + num).includes("e")) {
+		return +(Math.round(num + "e+" + 2)  + "e-" + 2);
+	} else {
+		let arr = ("" + num).split("e");
+		let sig = ""
+		if (+arr[1] + 2 > 0) {
+			sig = "+";
+		}
+
+		return +(Math.round(+arr[0] + "e" + sig + (+arr[1] )) + "e-" );
+	}
 }
+
+const verifyifPricesHas2Decimals = (num) => {
+    return num = round(num);
+} 
 const createSectionTotalPriceAssyncAwait = async (atualPrice, signal) => {
   if (signal === '+') {
     totalPrice += atualPrice;
   } else {
     totalPrice -= atualPrice;
   }
+  totalPrice = verifyifPricesHas2Decimals(totalPrice);
   try {
-    roundToTwoDecimals(totalPrice);
     const span = await document.createElement('span');
     span.className = 'total-price';
-    span.innerHTML = `Preço Total: ${totalPrice}`;
+    span.innerHTML = `Preço Total: R$ ${totalPrice},00`;
     const sectionOl = await document.querySelector('.cart_border');
     sectionOl.appendChild(span);
   } catch (error) {
@@ -110,11 +122,9 @@ function createStoreItens(item) {
 }
 const removeItemLocalStorage = (id) => {
   const arrayItems = getArrayFromLocalStorage();
-  console.log(id);
   arrayItems.forEach((item, index) => {
     if (item.sku == id) {
       arrayItems.splice(index, 1);
-      console.log(index + 'ola' + 'ola' + item.sku + 'ola' + id);
       return false;
     }
   });
@@ -130,16 +140,16 @@ function cartItemClickListener(event) {
   // coloque seu código aqui
   const ol = document.querySelector('ol');
   const li = document.querySelectorAll('.cart__item');
+  let ConditionToRunJustOneTime = false;
   const textOfClickedLi = event.path[0].innerText;
   li.forEach((liItem) => {
-    if (liItem.innerText === textOfClickedLi) {
+    if (liItem.innerText === textOfClickedLi && ConditionToRunJustOneTime === false) {
       let atualPrice = catchPriceById(liItem.id);
       removeItemLocalStorage(liItem.id);
-      atualPrice = roundToTwoDecimals(atualPrice);
       deleteSectionTotalPriceAssyncAeait();
       createSectionTotalPriceAssyncAwait(atualPrice, '-');
       ol.removeChild(liItem);
-      return false;
+      ConditionToRunJustOneTime += true;
     }
   });
 }
@@ -153,6 +163,7 @@ const getArrayFromLocalStorage = () => {
 
 let arrayInfos = getArrayFromLocalStorage();
 const addArrayInfos = (infosObject) => {
+  arrayInfos = getArrayFromLocalStorage();
   arrayInfos.push(infosObject);
   return arrayInfos;
 };
@@ -161,10 +172,6 @@ const addlocalStorage = (array) => {
 
 };
 
-const verifyIfThereisOnStorage = (arrayStorage, objectToVerify) => {
- const array = arrayStorage.find(element => JSON.stringify(element) === JSON.stringify(objectToVerify));
- return array;
-}
 const fillCartItems = () => {
   const ol = document.querySelector('.cart__items');
   const arrayItems = getArrayFromLocalStorage();
@@ -177,7 +184,6 @@ const fillCartItems = () => {
     totalPrice += element.salePrice;
     ol.appendChild(li);
   });
-  roundToTwoDecimals(totalPrice);
   const span = document.createElement('span');
   span.className = 'total-price';
   span.innerHTML = `Preço Total: ${totalPrice}`;
@@ -187,14 +193,13 @@ const fillCartItems = () => {
 
 function createCartItemElement(infosItem) {
   const arrayItems = getArrayFromLocalStorage();
-   const infosItemVerify = verifyIfThereisOnStorage(arrayItems, infosItem);
     const li = document.createElement('li');
     li.className = 'cart__item';
-    li.id = infosItemVerify.sku;
-    li.innerText = `SKU: ${infosItemVerify.sku} | NAME: ${infosItemVerify.name} | PRICE: $${infosItemVerify.salePrice}`;
+    li.id = infosItem.sku;
+    li.innerText = `SKU: ${infosItem.sku} | NAME: ${infosItem.name} | PRICE: $${infosItem.salePrice}`;
     li.addEventListener('click', cartItemClickListener);
     deleteSectionTotalPriceAssyncAeait();
-    createSectionTotalPriceAssyncAwait(infosItemVerify.salePrice, '+');
+    createSectionTotalPriceAssyncAwait(infosItem.salePrice, '+');
     return li;
 }
 const handleWithSearchId = (object) => {
